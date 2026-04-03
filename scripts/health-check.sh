@@ -36,11 +36,14 @@ check_service "Envoy Admin" "http://localhost:9901/ready" || ((failures++))
 
 echo ""
 echo "── Vector Aggregator ──"
-check_service "Vector Health" "http://localhost:8687/health" || ((failures++))
+# changed port from 8687 to 8686, that is correct port
+check_service "Vector Health" "http://localhost:8686/health" || ((failures++))
 
 echo ""
 echo "── Redpanda ──"
-check_service "Redpanda Admin" "http://localhost:9644/v1/cluster/health" || ((failures++))
+# check_service "Redpanda Admin" "http://localhost:9644/v1/cluster/health" || ((failures++))
+# changed endpoint to /v1/status/ready, that is correct endpoint for health check
+check_service "Redpanda Admin" "http://localhost:9644/v1/status/ready" || ((failures++))
 check_service "Schema Registry" "http://localhost:18081/subjects" || ((failures++))
 
 echo ""

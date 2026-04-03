@@ -12,10 +12,13 @@ import requests
 
 
 # ── Service URLs (from docker-compose) ──
-VECTOR_AGG_URL = os.getenv("VECTOR_AGG_URL", "http://localhost:8686")
+# changed Vector Aggregator port from 8686 to 8687, that is correct port, vector aggregator listens on it
+VECTOR_AGG_URL = os.getenv("VECTOR_AGG_URL", "http://localhost:8687")
 REDPANDA_BROKER = os.getenv("REDPANDA_BROKER", "localhost:19092")
 REDPANDA_ADMIN_URL = os.getenv("REDPANDA_ADMIN_URL", "http://localhost:9644")
 CLICKHOUSE_URL = os.getenv("CLICKHOUSE_URL", "http://localhost:8123")
+# ClickHouse container is running correctly, but the HTTP interface likely requires authentication.
+# CLICKHOUSE_URL = os.getenv("CLICKHOUSE_URL", "http://default:@localhost:8123")
 FLINK_URL = os.getenv("FLINK_URL", "http://localhost:8081")
 
 
@@ -36,7 +39,8 @@ def wait_for_service(url, timeout=60, interval=2):
 @pytest.fixture(scope="session", autouse=True)
 def ensure_services():
     """Ensure all services are running before tests."""
-    wait_for_service(f"{REDPANDA_ADMIN_URL}/v1/cluster/health")
+    # redpanda status endpoint changed from cluster/health to status/ready in latest versions
+    wait_for_service(f"{REDPANDA_ADMIN_URL}/v1/status/ready")
     wait_for_service(f"{CLICKHOUSE_URL}/ping")
 
 

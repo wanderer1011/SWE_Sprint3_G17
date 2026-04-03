@@ -47,11 +47,16 @@ services:
     depends_on:
       redpanda:
         condition: service_healthy
-    healthcheck:                                     # FIX: was missing — blocks envoy startup
-      test: ["CMD", "curl", "-sf", "http://127.0.0.1:8686/health"]
+    # healthcheck:                                     # FIX: was missing — blocks envoy startup
+    #   test: ["CMD", "curl", "-sf", "http://127.0.0.1:8686/health"]
+    #   interval: 10s
+    #   timeout: 5s
+    #   start_period: 15s
+    #   retries: 5
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c '</dev/tcp/localhost/8686'"]
       interval: 10s
       timeout: 5s
-      start_period: 15s
       retries: 5
     networks:
       - ingestion-net

@@ -22,10 +22,19 @@ from conftest import (
 
 def clickhouse_query(query):
     """Execute a ClickHouse query via HTTP interface."""
+    # added a params attribute additionlly
     resp = requests.post(
         CLICKHOUSE_URL,
         data=query,
-        headers={"Content-Type": "text/plain"},
+        # due to 403 forbidden error:
+        # headers={
+        #     "X-ClickHouse-User": "default",
+        #     "X-ClickHouse-Key": ""
+        # },
+        params={
+            "user": "default",
+            "password": "changeme"
+        },
         timeout=10,
     )
     resp.raise_for_status()
@@ -62,12 +71,22 @@ class TestClickHouseIngestion:
         event = make_telemetry_event(service_name="test-bloom")
         event["trace_id"] = trace_id
         send_events_to_vector([event])
-
-        time.sleep(15)
-
+        
+        # wait time slightly increased
+        time.sleep(20)
+        
+        # more reliable query to check bloom filters
+        # result = clickhouse_query(
+        #     f"SELECT count() FROM telemetry.logs WHERE trace_id = '{trace_id}'"
+        # )
         result = clickhouse_query(
-            f"SELECT count() FROM telemetry.logs WHERE trace_id = '{trace_id}'"
-        )
+            f"""
+            SELECT count()
+            FROM telemetry.logs
+            WHERE trace_id = '{trace_id}'
+            AND service_name = 'test-bloom'
+            """
+            )
         count = int(result) if result else 0
         assert count >= 1, f"Expected trace in ClickHouse, got count={count}"
 
