@@ -1,4 +1,4 @@
-.PHONY: help up down restart logs build test health topics flink-build flink-deploy clean status validate
+.PHONY: help up down restart logs build test test-deps health topics flink-build flink-deploy clean status validate
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | \
@@ -32,23 +32,27 @@ flink-build: ## Build Flink job JAR
 	cd flink && mvn clean package -DskipTests
 
 flink-deploy: flink-build ## Build and submit Flink job to cluster
-	docker compose exec flink-jobmanager flink run \
+	docker compose exec -T flink-jobmanager flink run -d \
 		/opt/flink/usrlib/ingestion-hot-path-1.0.0.jar
 
 health: ## Run health checks on all services
 	bash scripts/health-check.sh
 
-test: ## Run integration tests
-	cd tests && python -m pytest -v
+test-deps: ## Install Python test dependencies (user scope)
+	python3 -m venv .venv
+	.venv/bin/pip install -r tests/requirements.txt
 
-test-routing: ## Test hot/cold/DLQ routing only
-	cd tests && python -m pytest test_routing.py -v
+test: test-deps ## Run integration tests
+	cd tests && ../.venv/bin/pytest -v
 
-test-e2e: ## Run full end-to-end pipeline test
-	cd tests && python -m pytest test_e2e_pipeline.py -v
+test-routing: test-deps ## Test hot/cold/DLQ routing only
+	cd tests && ../.venv/bin/pytest test_routing.py -v
+
+test-e2e: test-deps ## Run full end-to-end pipeline test
+	cd tests && ../.venv/bin/pytest test_e2e_pipeline.py -v
 
 generate-data: ## Generate sample telemetry data
-	python scripts/generate-test-data.py
+	python3 scripts/generate-test-data.py
 
 clean: ## Remove volumes and data
 	docker compose down -v

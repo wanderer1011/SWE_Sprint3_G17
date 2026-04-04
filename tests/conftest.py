@@ -12,10 +12,12 @@ import requests
 
 
 # ── Service URLs (from docker-compose) ──
-VECTOR_AGG_URL = os.getenv("VECTOR_AGG_URL", "http://localhost:8686")
+VECTOR_AGG_URL = os.getenv("VECTOR_AGG_URL", "http://localhost:8687")
 REDPANDA_BROKER = os.getenv("REDPANDA_BROKER", "localhost:19092")
 REDPANDA_ADMIN_URL = os.getenv("REDPANDA_ADMIN_URL", "http://localhost:9644")
 CLICKHOUSE_URL = os.getenv("CLICKHOUSE_URL", "http://localhost:8123")
+CLICKHOUSE_USER = os.getenv("CLICKHOUSE_USER", "default")
+CLICKHOUSE_PASSWORD = os.getenv("CLICKHOUSE_PASSWORD", "changeme")
 FLINK_URL = os.getenv("FLINK_URL", "http://localhost:8081")
 
 
@@ -36,8 +38,10 @@ def wait_for_service(url, timeout=60, interval=2):
 @pytest.fixture(scope="session", autouse=True)
 def ensure_services():
     """Ensure all services are running before tests."""
-    wait_for_service(f"{REDPANDA_ADMIN_URL}/v1/cluster/health")
-    wait_for_service(f"{CLICKHOUSE_URL}/ping")
+    wait_for_service(f"{REDPANDA_ADMIN_URL}/v1/cluster/health_overview")
+    wait_for_service(
+        f"{CLICKHOUSE_URL}/?user={CLICKHOUSE_USER}&password={CLICKHOUSE_PASSWORD}&query=SELECT%201"
+    )
 
 
 def make_telemetry_event(
@@ -61,6 +65,6 @@ def send_events_to_vector(events, url=VECTOR_AGG_URL):
     """Send events to Vector Aggregator via HTTP."""
     results = []
     for event in events:
-        resp = requests.post(url, json=event, timeout=10)
+        resp = requests.post(url, json=event, timeout=30)
         results.append(resp.status_code)
     return results

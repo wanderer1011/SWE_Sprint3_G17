@@ -16,6 +16,8 @@ from conftest import (
     make_telemetry_event,
     send_events_to_vector,
     CLICKHOUSE_URL,
+    CLICKHOUSE_USER,
+    CLICKHOUSE_PASSWORD,
     REDPANDA_BROKER,
 )
 
@@ -24,6 +26,7 @@ def clickhouse_query(query):
     """Execute a ClickHouse query via HTTP interface."""
     resp = requests.post(
         CLICKHOUSE_URL,
+        params={"user": CLICKHOUSE_USER, "password": CLICKHOUSE_PASSWORD},
         data=query,
         headers={"Content-Type": "text/plain"},
         timeout=10,
@@ -46,13 +49,17 @@ class TestClickHouseIngestion:
         )
         send_events_to_vector([event])
 
-        # Wait for Kafka Engine + MV pipeline
-        time.sleep(15)
+        # Poll because Kafka Engine + MV ingestion is eventually consistent.
+        count = 0
+        for _ in range(12):
+            result = clickhouse_query(
+                f"SELECT count() FROM telemetry.logs WHERE body = '{unique_body}'"
+            )
+            count = int(result) if result else 0
+            if count >= 1:
+                break
+            time.sleep(5)
 
-        result = clickhouse_query(
-            f"SELECT count() FROM telemetry.logs WHERE body = '{unique_body}'"
-        )
-        count = int(result) if result else 0
         assert count >= 1, f"Expected event in ClickHouse, got count={count}"
 
     def test_bloom_filter_trace_lookup(self):

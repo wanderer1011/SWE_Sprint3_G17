@@ -11,7 +11,7 @@
 # ─────────────────────────────────────────────────────────────
 set -euo pipefail
 
-BROKER="${REDPANDA_BROKER:-localhost:9092}"
+BROKER="${REDPANDA_BROKER:-127.0.0.1:9092}"
 REPLICATION="${REPLICATION_FACTOR:-1}"
 
 echo "==> Creating Redpanda topics on ${BROKER}..."
