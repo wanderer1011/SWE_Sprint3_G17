@@ -1,6 +1,9 @@
 # Pin to a specific patch release — avoid floating `:v1.30-latest` tag (supply-chain risk)
 FROM envoyproxy/envoy:v1.30.4
 
+# Install curl for healthchecks (run as root before USER switch)
+RUN apt-get update && apt-get install -y --no-install-recommends curl && rm -rf /var/lib/apt/lists/*
+
 # Copy configuration and validate it at build time (fail-fast on bad YAML)
 COPY envoy.yaml /etc/envoy/envoy.yaml
 RUN envoy --mode validate -c /etc/envoy/envoy.yaml

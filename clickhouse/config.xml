@@ -7,10 +7,8 @@
 
     <!-- Kafka (Redpanda) integration settings -->
     <kafka>
-        <broker_list>redpanda:9092</broker_list>
-        <group_name>clickhouse-cold-consumer</group_name>
+        <!-- broker is set in the Kafka Engine table definition (kafka_broker_list) -->
         <auto_offset_reset>earliest</auto_offset_reset>
-        <format>JSONEachRow</format>
     </kafka>
 
     <!-- MergeTree settings for optimized writes -->
