@@ -146,7 +146,7 @@ def send_kafka(events):
 def main():
     parser = argparse.ArgumentParser(description="Generate IDOP test telemetry data")
     parser.add_argument("--mode", choices=["http", "kafka"], default="http")
-    parser.add_argument("--count", type=int, default=100)
+    parser.add_argument("--count", type=int, default=500)
     args = parser.parse_args()
 
     print(f"Generating {args.count} telemetry events...")
