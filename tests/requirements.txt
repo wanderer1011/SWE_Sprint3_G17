@@ -4,3 +4,4 @@ kafka-python>=2.0
 clickhouse-connect>=0.7
 docker>=7.0
 testcontainers>=4.0
+python-snappy>=0.7

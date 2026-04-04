@@ -40,7 +40,7 @@ def wait_for_service(url, timeout=60, interval=2):
 def ensure_services():
     """Ensure all services are running before tests."""
     # redpanda status endpoint changed from cluster/health to status/ready in latest versions
-    wait_for_service(f"{REDPANDA_ADMIN_URL}/v1/status/ready")
+    wait_for_service(f"{REDPANDA_ADMIN_URL}/v1/cluster/health_overview")
     wait_for_service(f"{CLICKHOUSE_URL}/ping")
 
 

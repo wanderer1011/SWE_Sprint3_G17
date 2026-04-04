@@ -36,9 +36,8 @@ SELECT
     service_name,
     severity,
     body,
-    '' AS ml_features,
+    ml_features,
     is_anomalous,
-    '' AS anomaly_reason,
     now() AS aggregator_received_at,
     now() AS inserted_at
 FROM telemetry_staging.kafka_telemetry_cold;

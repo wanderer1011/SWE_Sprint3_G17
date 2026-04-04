@@ -34,6 +34,12 @@
               </transformers>
               <filters>
                 <filter>
+                  <artifact>com.clickhouse:clickhouse-jdbc</artifact>
+                  <excludes>
+                    <exclude>com/fasterxml/jackson/**</exclude>
+                  </excludes>
+                </filter>
+                <filter>
                   <artifact>*:*</artifact>
                   <excludes>
                     <exclude>META-INF/*.SF</exclude>

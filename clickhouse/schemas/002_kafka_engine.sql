@@ -27,7 +27,7 @@
 --     kafka_skip_broken_messages = 1000;
 
 -- testing cause of JSON parsing issues with ml_features field — will add back after fixing producer side
-CREATE TABLE IF NOT EXISTS telemetry_staging.kafka_telemetry_cold
+CREATE TABLE telemetry_staging.kafka_telemetry_cold
 (
     timestamp String,
     trace_id String,
@@ -35,6 +35,7 @@ CREATE TABLE IF NOT EXISTS telemetry_staging.kafka_telemetry_cold
     service_name String,
     severity String,
     body String,
+    ml_features String,
     is_anomalous UInt8
 )
 ENGINE = Kafka
@@ -43,5 +44,5 @@ SETTINGS
     kafka_topic_list = 'telemetry-cold',
     kafka_group_name = 'clickhouse-cold-consumer',
     kafka_format = 'JSONEachRow',
-    kafka_num_consumers = 1,
-    kafka_skip_broken_messages = 100;
+    kafka_num_consumers = 1;
+--     kafka_skip_broken_messages = 100;

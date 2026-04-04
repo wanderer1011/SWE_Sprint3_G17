@@ -25,8 +25,9 @@ status: ## Show service health status
 validate: ## Validate docker-compose.yml syntax
 	docker compose config --quiet
 
-topics: ## Create Redpanda topics
-	docker compose exec redpanda bash /etc/redpanda/scripts/create-topics.sh
+topics: ## Create Redpanda topics, commented below since it doesn't work with the config, hence local config is intended
+# 	docker compose exec redpanda bash /etc/redpanda/scripts/create-topics.sh
+	bash ./redpanda/scripts/create-topics.sh
 
 flink-build: ## Build Flink job JAR
 	cd flink && mvn clean package -DskipTests
@@ -48,7 +49,7 @@ test-e2e: ## Run full end-to-end pipeline test
 	cd tests && python -m pytest test_e2e_pipeline.py -v
 
 generate-data: ## Generate sample telemetry data
-	python scripts/generate-test-data.py
+	python3 scripts/generate-test-data.py
 
 clean: ## Remove volumes and data
 	docker compose down -v

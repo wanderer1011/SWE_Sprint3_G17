@@ -53,7 +53,7 @@ class TestEndToEndPipeline:
     def test_redpanda_topics_exist(self):
         """Verify all required topics are created."""
         # latest Redpanda used status/ready instead of cluster/health
-        resp = requests.get(f"{REDPANDA_ADMIN_URL}/v1/status/ready", timeout=5)
+        resp = requests.get(f"{REDPANDA_ADMIN_URL}/v1/cluster/health_overview", timeout=5)
         assert resp.status_code == 200
 
     def test_flink_job_running(self):

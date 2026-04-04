@@ -24,8 +24,7 @@ REDPANDA_BROKER = "localhost:19092"
 SERVICES = [
     "api-gateway", "user-service", "order-service",
     "payment-service", "inventory-service", "notification-service",
-    "auth-service", "search-service",
-]
+    "auth-service", "search-service"]
 
 SEVERITIES = ["DEBUG", "INFO", "INFO", "INFO", "WARN", "ERROR", "CRITICAL"]
 SEVERITY_WEIGHTS = [5, 30, 30, 30, 15, 8, 2]
