@@ -26,6 +26,11 @@
         <default>
             <max_memory_usage>10000000000</max_memory_usage>
             <max_execution_time>30</max_execution_time>
+            <!-- Required for Kafka Engine JSON parsing (Vector output has extra fields) -->
+            <input_format_skip_unknown_fields>1</input_format_skip_unknown_fields>
+            <input_format_json_read_objects_as_strings>1</input_format_json_read_objects_as_strings>
+            <input_format_json_read_bools_as_numbers>1</input_format_json_read_bools_as_numbers>
+            <date_time_input_format>best_effort</date_time_input_format>
         </default>
         <readonly>
             <readonly>1</readonly>

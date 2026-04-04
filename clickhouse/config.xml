@@ -5,19 +5,12 @@
         <console>1</console>
     </logger>
 
-    <!-- Kafka (Redpanda) integration settings -->
-    <!-- clickhouse is internally converting kafka_broker_list to kafka.broker.list and giving error, commented it -->
-    <!-- <kafka>
-        <kafka_broker_list>redpanda:9092</kafka_broker_list>
-        <group_name>clickhouse-cold-consumer</group_name>
+    <!-- Kafka (Redpanda) integration settings 
+    clickhouse is internally converting kafka_broker_list to kafka.broker.list and giving error, commented it -->
+    <kafka>
+        <!-- broker is set in the Kafka Engine table definition (kafka_broker_list) -->
         <auto_offset_reset>earliest</auto_offset_reset>
-        <format>JSONEachRow</format>
-    </kafka> -->
-    <!-- <kafka>
-        <bootstrap.servers>redpanda:9092</bootstrap.servers>
-        <group.id>clickhouse-cold-consumer</group.id>
-        <auto.offset.reset>earliest</auto.offset.reset>
-    </kafka> -->
+    </kafka>
 
     <!-- MergeTree settings for optimized writes -->
     <merge_tree>

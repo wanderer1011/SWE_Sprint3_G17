@@ -55,13 +55,25 @@ class TestClickHouseIngestion:
         )
         send_events_to_vector([event])
 
-        # Wait for Kafka Engine + MV pipeline
-        time.sleep(15)
+        # # Wait for Kafka Engine + MV pipeline
+        # time.sleep(15)
+        # result = clickhouse_query(
+        #     f"SELECT count() FROM telemetry.logs WHERE body = '{unique_body}'")
+        # count = int(result) if result else 0
+        
+        # REPLACED THE ABOVE 5 LINES WITH BELOW 9 LINES TO MAKE THE TEST MORE RELIABLE(AND MITIGATE ASSERTION ERRORS DUE TO PIPELINE DELAYS)
 
-        result = clickhouse_query(
-            f"SELECT count() FROM telemetry.logs WHERE body = '{unique_body}'"
-        )
-        count = int(result) if result else 0
+        # Poll ClickHouse until the event appears (max 30s)
+        count = 0
+        start = time.time()
+        while time.time() - start < 30:
+            result = clickhouse_query(
+                f"SELECT count() FROM telemetry.logs WHERE body = '{unique_body}'")
+            count = int(result) if result else 0
+            if count >= 1:
+                break
+            time.sleep(1)
+
         assert count >= 1, f"Expected event in ClickHouse, got count={count}"
 
     def test_bloom_filter_trace_lookup(self):

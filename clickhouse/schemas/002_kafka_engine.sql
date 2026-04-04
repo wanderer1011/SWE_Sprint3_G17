@@ -22,9 +22,9 @@
 --     kafka_topic_list = 'telemetry-cold',
 --     kafka_group_name = 'clickhouse-cold-consumer',
 --     kafka_format = 'JSONEachRow',
---     kafka_num_consumers = 2,
+--     kafka_num_consumers = 1,
 --     kafka_max_block_size = 100000,       -- REQ-2.4: batch 100k rows
---     kafka_skip_broken_messages = 10;
+--     kafka_skip_broken_messages = 1000;
 
 -- testing cause of JSON parsing issues with ml_features field — will add back after fixing producer side
 CREATE TABLE IF NOT EXISTS telemetry_staging.kafka_telemetry_cold
