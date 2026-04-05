@@ -88,6 +88,7 @@ services:
       - "9644:9644"     # Admin API
     volumes:
       - redpanda-data:/var/lib/redpanda/data
+      - ./redpanda/scripts:/etc/redpanda/scripts:ro # so that makefile's topics target can access it
     healthcheck:
       test: ["CMD", "rpk", "cluster", "health"]
       interval: 10s

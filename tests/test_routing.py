@@ -52,18 +52,18 @@ class TestHotColdRouting:
 
         time.sleep(3)
         # wait untill kafka actually produces a msg
-        messages = list(consumer)
-        # messages = []
-        # start = time.time()
+        # messages = list(consumer)
+        messages = []
+        start = time.time()
 
-        # while time.time() - start < 8:
-        #     records = consumer.poll(timeout_ms=500)
+        while time.time() - start < 8:
+            records = consumer.poll(timeout_ms=500)
 
-        #     for tp, msgs in records.items():
-        #         messages.extend(msgs)
+            for tp, msgs in records.items():
+                messages.extend(msgs)
 
-        #     if messages:
-        #         break
+            if messages:
+                break
 
         consumer.close()
 
@@ -84,18 +84,18 @@ class TestHotColdRouting:
         time.sleep(3)
         
         # wait until kafka actually produces a msg
-        messages = list(consumer)
-        # messages = []
-        # start = time.time()
+        # messages = list(consumer)
+        messages = []
+        start = time.time()
 
-        # while time.time() - start < 8:
-        #     records = consumer.poll(timeout_ms=500)
+        while time.time() - start < 8:
+            records = consumer.poll(timeout_ms=500)
 
-        #     for tp, msgs in records.items():
-        #         messages.extend(msgs)
+            for tp, msgs in records.items():
+                messages.extend(msgs)
 
-        #     if messages:
-        #         break
+            if messages:
+                break
         consumer.close()
 
         assert len(messages) > 0, "Expected event on telemetry-hot"

@@ -38,6 +38,7 @@ SELECT
     body,
     ml_features,
     is_anomalous,
+    anomaly_reason,
     now() AS aggregator_received_at,
     now() AS inserted_at
 FROM telemetry_staging.kafka_telemetry_cold;

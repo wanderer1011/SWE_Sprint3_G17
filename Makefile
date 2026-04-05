@@ -1,4 +1,8 @@
-.PHONY: help up down restart logs build test health topics flink-build flink-deploy clean status validate
+.PHONY: help up down restart logs build test health topics flink-build flink-deploy flink-wait clean status validate
+
+FLINK_JAR_PATH ?= /opt/flink/usrlib/ingestion-hot-path-1.0.0.jar
+FLINK_API_URL ?= http://localhost:8081
+FLINK_DEPLOY_WAIT_SECONDS ?= 30
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | \
@@ -25,16 +29,37 @@ status: ## Show service health status
 validate: ## Validate docker-compose.yml syntax
 	docker compose config --quiet
 
-topics: ## Create Redpanda topics, commented below since it doesn't work with the config, hence local config is intended
-# 	docker compose exec redpanda bash /etc/redpanda/scripts/create-topics.sh
-	bash ./redpanda/scripts/create-topics.sh
+topics: ## Create Redpanda topics
+	docker compose exec redpanda bash /etc/redpanda/scripts/create-topics.sh
+# if command fails, replace the above with below for running locally
+# 	bash ./redpanda/scripts/create-topics.sh
 
 flink-build: ## Build Flink job JAR
 	cd flink && mvn clean package -DskipTests
 
 flink-deploy: flink-build ## Build and submit Flink job to cluster
-	docker compose exec flink-jobmanager flink run \
-		/opt/flink/usrlib/ingestion-hot-path-1.0.0.jar
+	@RUNNING_COUNT=$$(curl -sf "$(FLINK_API_URL)/jobs/overview" | grep -o '"state":"RUNNING"' | wc -l | tr -d ' '); \
+	if [ "$$RUNNING_COUNT" -gt 0 ]; then \
+		echo "A Flink job is already RUNNING; skipping duplicate submission."; \
+	else \
+		echo "Submitting Flink job in detached mode..."; \
+		docker compose exec -T flink-jobmanager flink run -d $(FLINK_JAR_PATH); \
+	fi
+	@$(MAKE) flink-wait
+
+flink-wait: ## Wait until a Flink job reaches RUNNING state
+	@echo "Waiting for Flink job to reach RUNNING state..."
+	@for i in $$(seq 1 $(FLINK_DEPLOY_WAIT_SECONDS)); do \
+		RUNNING_COUNT=$$(curl -sf "$(FLINK_API_URL)/jobs/overview" | grep -o '"state":"RUNNING"' | wc -l | tr -d ' '); \
+		if [ "$$RUNNING_COUNT" -gt 0 ]; then \
+			echo "Flink job is RUNNING."; \
+			exit 0; \
+		fi; \
+		sleep 1; \
+	done; \
+	echo "No RUNNING Flink jobs found after $(FLINK_DEPLOY_WAIT_SECONDS)s." >&2; \
+	curl -sf "$(FLINK_API_URL)/jobs/overview" || true; \
+	exit 1
 
 health: ## Run health checks on all services
 	bash scripts/health-check.sh

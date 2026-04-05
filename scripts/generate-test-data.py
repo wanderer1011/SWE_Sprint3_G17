@@ -143,9 +143,60 @@ def send_kafka(events):
     producer.close()
 
 
+def send_mixed(events):
+    """Send events using both HTTP and Kafka (alternating per event)."""
+    import urllib.request
+
+    try:
+        from kafka import KafkaProducer
+    except ImportError:
+        print("kafka-python not installed. Falling back to HTTP only.", file=sys.stderr)
+        send_http(events)
+        return
+
+    producer = KafkaProducer(
+        bootstrap_servers=REDPANDA_BROKER,
+        value_serializer=lambda v: json.dumps(v).encode("utf-8"),
+        key_serializer=lambda k: k.encode("utf-8") if k else None,
+    )
+
+    topic = "telemetry-cold"
+    http_count = 0
+    kafka_count = 0
+
+    for i, event in enumerate(events):
+        if i % 2 == 0:
+            data = json.dumps(event).encode("utf-8")
+            req = urllib.request.Request(
+                VECTOR_HTTP_URL,
+                data=data,
+                headers={"Content-Type": "application/json"},
+            )
+            try:
+                urllib.request.urlopen(req, timeout=5)
+                http_count += 1
+            except Exception as e:
+                print(f"  Failed HTTP send for event {i}: {e}", file=sys.stderr)
+        else:
+            try:
+                producer.send(topic, key=event.get("trace_id"), value=event)
+                kafka_count += 1
+            except Exception as e:
+                print(f"  Failed Kafka send for event {i}: {e}", file=sys.stderr)
+
+        if (i + 1) % 200 == 0:
+            print(
+                f"  Processed {i + 1}/{len(events)} events "
+                f"(HTTP: {http_count}, Kafka: {kafka_count})"
+            )
+
+    producer.flush()
+    producer.close()
+
+
 def main():
     parser = argparse.ArgumentParser(description="Generate IDOP test telemetry data")
-    parser.add_argument("--mode", choices=["http", "kafka"], default="http")
+    parser.add_argument("--mode", choices=["http", "kafka", "mixed"], default="http")
     parser.add_argument("--count", type=int, default=500)
     args = parser.parse_args()
 
@@ -155,8 +206,11 @@ def main():
 
     if args.mode == "http":
         send_http(events)
-    else:
+    elif args.mode == "kafka":
         send_kafka(events)
+    else:
+        send_mixed(events)
+
 
     print("Done.")
 

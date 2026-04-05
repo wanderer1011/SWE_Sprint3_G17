@@ -58,17 +58,30 @@ class TestEndToEndPipeline:
 
     def test_flink_job_running(self):
         """Verify the Flink hot path job is running."""
-        try:
-            resp = requests.get(f"{FLINK_URL}/jobs/overview", timeout=5)
-            if resp.status_code == 200:
-                jobs = resp.json().get("jobs", [])
-                running = [j for j in jobs if j.get("state") == "RUNNING"]
-                # commenting the below line with other if-statement(since currently there are no running  during this test execution)
-                # assert len(running) > 0, "No Flink jobs running"
-                if len(running) == 0:
-                    pytest.skip("No Flink jobs deployed")
-        except requests.ConnectionError:
-            pytest.skip("Flink not reachable")
+        deadline = time.time() + 30
+        last_error = None
+
+        while time.time() < deadline:
+            try:
+                resp = requests.get(f"{FLINK_URL}/jobs/overview", timeout=5)
+                if resp.status_code == 200:
+                    jobs = resp.json().get("jobs", [])
+                    running = [j for j in jobs if j.get("state") == "RUNNING"]
+                    if running:
+                        return
+                    last_error = "jobs list remained empty"
+                else:
+                    last_error = f"Flink API returned status {resp.status_code}"
+            except requests.ConnectionError:
+                last_error = "Flink not reachable"
+
+            time.sleep(2)
+
+        pytest.fail(
+            "No Flink jobs running after waiting 30s. "
+            "Run 'make flink-deploy' and verify deployment. "
+            f"Last observed error: {last_error}"
+        )
 
     def test_clickhouse_schema_deployed(self):
         """Verify ClickHouse schema is deployed correctly."""
