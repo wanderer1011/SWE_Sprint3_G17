@@ -6,22 +6,44 @@
 
 CREATE TABLE IF NOT EXISTS telemetry.logs
 (
-    -- Core fields (REQ-1.9 schema)
+    -- Tier 1: Identity & Correlation
     timestamp         DateTime64(9, 'UTC')  CODEC(DoubleDelta, ZSTD(1)),
     trace_id          String                CODEC(ZSTD(1)),
     span_id           String                CODEC(ZSTD(1)),
+    parent_span_id    String                CODEC(ZSTD(1)),
     service_name      LowCardinality(String),
+    service_version   LowCardinality(String),
+
+    -- Tier 2: Classification
+    severity_text     LowCardinality(String),
     severity          LowCardinality(String),
+    severity_number   UInt8,
+    category          LowCardinality(String),
+    source_type       LowCardinality(String),
+    signal_type       LowCardinality(String),
+    status_code       UInt16,
+
+    -- Tier 3: Content
     body              String                CODEC(ZSTD(3)),
+    error_class       LowCardinality(String),
 
-    -- ML features (stored as JSON string, parsed on read)
+    -- Tier 4: Operational Context
+    host_name         LowCardinality(String),
+    environment       LowCardinality(String),
+    deployment_id     String                CODEC(ZSTD(1)),
+    duration_ms       Float64,
+
+    -- Tier 5: Pipeline Metadata
+    pipeline_ts       String                CODEC(ZSTD(1)),
+    pii_masked        UInt8,
+
+    -- Vector Aggregator enrichments
     ml_features       String                CODEC(ZSTD(1)),
-
-    -- Routing metadata
     is_anomalous      UInt8,
     anomaly_reason    LowCardinality(String),
-
-    -- Aggregator metadata
+    is_metric         UInt8,
+    is_security_flag  UInt8,
+    resource_flat     String                CODEC(ZSTD(1)),
     aggregator_received_at  DateTime64(9, 'UTC'),
 
     -- Insertion metadata

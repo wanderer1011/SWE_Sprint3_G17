@@ -16,6 +16,8 @@ from conftest import (
     make_telemetry_event,
     send_events_to_vector,
     CLICKHOUSE_URL,
+    CLICKHOUSE_USER,
+    CLICKHOUSE_PASSWORD,
     FLINK_URL,
     REDPANDA_BROKER,
     REDPANDA_ADMIN_URL,
@@ -71,6 +73,7 @@ class TestEndToEndPipeline:
         resp = requests.post(
             CLICKHOUSE_URL,
             data="SELECT name FROM system.tables WHERE database = 'telemetry'",
+            params={"user": CLICKHOUSE_USER, "password": CLICKHOUSE_PASSWORD},
             timeout=5,
         )
         assert resp.status_code == 200

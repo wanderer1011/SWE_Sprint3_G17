@@ -16,6 +16,8 @@ from conftest import (
     make_telemetry_event,
     send_events_to_vector,
     CLICKHOUSE_URL,
+    CLICKHOUSE_USER,
+    CLICKHOUSE_PASSWORD,
     REDPANDA_BROKER,
 )
 
@@ -26,6 +28,7 @@ def clickhouse_query(query):
         CLICKHOUSE_URL,
         data=query,
         headers={"Content-Type": "text/plain"},
+        params={"user": CLICKHOUSE_USER, "password": CLICKHOUSE_PASSWORD},
         timeout=10,
     )
     resp.raise_for_status()

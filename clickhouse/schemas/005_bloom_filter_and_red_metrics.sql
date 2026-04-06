@@ -44,8 +44,8 @@ SELECT
     service_name,
     count()                     AS total_requests,
     countIf(severity IN ('ERROR', 'CRITICAL', 'FATAL')) AS error_count,
-    avg(JSONExtractFloat(ml_features, 'latency_ms'))    AS avg_latency_ms,
-    quantile(0.95)(JSONExtractFloat(ml_features, 'latency_ms')) AS p95_latency_ms,
-    quantile(0.99)(JSONExtractFloat(ml_features, 'latency_ms')) AS p99_latency_ms
+    avg(if(duration_ms >= 0, duration_ms, 0))           AS avg_latency_ms,
+    quantile(0.95)(if(duration_ms >= 0, duration_ms, 0)) AS p95_latency_ms,
+    quantile(0.99)(if(duration_ms >= 0, duration_ms, 0)) AS p99_latency_ms
 FROM telemetry.logs
 GROUP BY window_start, service_name;

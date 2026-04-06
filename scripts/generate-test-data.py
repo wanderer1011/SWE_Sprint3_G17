@@ -30,6 +30,18 @@ SERVICES = [
 SEVERITIES = ["DEBUG", "INFO", "INFO", "INFO", "WARN", "ERROR", "CRITICAL"]
 SEVERITY_WEIGHTS = [5, 30, 30, 30, 15, 8, 2]
 
+# OTel severity number mapping (1-24 scale)
+SEVERITY_NUMBERS = {
+    "TRACE": 1, "DEBUG": 5, "INFO": 9, "WARN": 13,
+    "ERROR": 17, "CRITICAL": 21, "FATAL": 24,
+}
+
+CATEGORIES = ["otel-application", "otel-infrastructure", "legacy-syslog"]
+SOURCE_TYPES = ["otel", "legacy"]
+SIGNAL_TYPES = ["log", "trace"]
+ENVIRONMENTS = ["production", "staging", "development"]
+SERVICE_VERSIONS = ["v1.0.0", "v2.3.1", "v3.0.0-rc1", "unknown"]
+
 LOG_TEMPLATES = [
     "Request processed successfully in {latency}ms",
     "Database query completed: {query_type} on {table}",
@@ -58,7 +70,7 @@ def generate_span_id():
 
 
 def generate_event():
-    """Generate a single telemetry event."""
+    """Generate a single telemetry event matching the Universal Telemetry Schema."""
     service = random.choice(SERVICES)
     severity = random.choices(SEVERITIES, weights=SEVERITY_WEIGHTS, k=1)[0]
     template = random.choice(LOG_TEMPLATES)
@@ -84,18 +96,49 @@ def generate_event():
         partition=random.randint(0, 11),
     )
 
+    # Derive error_class from body content
+    error_class = ""
+    if "Exception" in body or "Error" in body:
+        for token in body.split():
+            if token.endswith("Exception") or token.endswith("Error"):
+                error_class = token.rstrip(":,.")
+                break
+    if not error_class and severity in ("ERROR", "CRITICAL"):
+        error_class = random.choice(["TimeoutError", "ConnectionError", "RuntimeError", ""])
+
+    now_ns = int(datetime.now(timezone.utc).timestamp() * 1e9)
+
     event = {
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        # Tier 1: Identity & Correlation
+        "timestamp": str(now_ns),
         "trace_id": generate_trace_id(),
         "span_id": generate_span_id(),
-        "service": {"name": service},
-        "severity": severity,
-        "body": body,
-    }
+        "parent_span_id": generate_span_id() if random.random() > 0.3 else "none",
+        "service_name": service,
+        "service_version": random.choice(SERVICE_VERSIONS),
 
-    # Add HTTP status if present in body
-    if "{status}" in template or "responded with" in body:
-        event["http_status"] = status
+        # Tier 2: Classification
+        "severity_text": severity,
+        "severity_number": SEVERITY_NUMBERS.get(severity, 9),
+        "category": random.choice(CATEGORIES),
+        "source_type": random.choice(SOURCE_TYPES),
+        "signal_type": random.choice(SIGNAL_TYPES),
+        "status_code": status if "responded with" in body else 0,
+
+        # Tier 3: Content
+        "body": body,
+        "error_class": error_class,
+
+        # Tier 4: Operational Context
+        "host_name": f"node-{random.randint(1, 10)}",
+        "environment": random.choice(ENVIRONMENTS),
+        "deployment_id": f"deploy-{uuid.uuid4().hex[:12]}",
+        "duration_ms": round(random.uniform(0.5, 5000.0), 1) if random.random() > 0.2 else -1.0,
+
+        # Tier 5: Pipeline Metadata
+        "pipeline_ts": str(now_ns + random.randint(100000, 1000000)),
+        "pii_masked": True,
+    }
 
     return event
 
