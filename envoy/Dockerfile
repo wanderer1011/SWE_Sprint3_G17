@@ -18,4 +18,5 @@ HEALTHCHECK --interval=15s --timeout=3s --start-period=10s --retries=3 \
     CMD curl -sf http://127.0.0.1:9901/ready || exit 1
 
 ENTRYPOINT ["envoy"]
+CMD ["-c", "/etc/envoy/envoy.yaml"]       # FIX: explicit config path — base image CMD was cleared by ENTRYPOINT override
 CMD ["-c", "/etc/envoy/envoy.yaml", "--log-level", "info"]

@@ -4,10 +4,10 @@ help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | \
 		awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
 
-build: ## Build all Docker images
+build: ## Build all Docker images (includes Flink JAR via multi-stage)
 	docker compose build
 
-up: build ## Start the full ingestion pipeline (builds first)
+up: build ## Start full pipeline (auto-creates topics, submits Flink job)
 	docker compose up -d --wait
 
 down: ## Stop the full ingestion pipeline
@@ -25,13 +25,13 @@ status: ## Show service health status
 validate: ## Validate docker-compose.yml syntax
 	docker compose config --quiet
 
-topics: ## Create Redpanda topics
+topics: ## Manually create Redpanda topics (auto-runs on 'make up')
 	docker compose exec redpanda bash /etc/redpanda/scripts/create-topics.sh
 
-flink-build: ## Build Flink job JAR
+flink-build: ## Build Flink job JAR locally (optional — Docker multi-stage handles this)
 	cd flink && mvn clean package -DskipTests
 
-flink-deploy: flink-build ## Build and submit Flink job to cluster
+flink-deploy: ## Manually submit Flink job (auto-runs on 'make up')
 	docker compose exec flink-jobmanager flink run \
 		/opt/flink/usrlib/ingestion-hot-path-1.0.0.jar
 

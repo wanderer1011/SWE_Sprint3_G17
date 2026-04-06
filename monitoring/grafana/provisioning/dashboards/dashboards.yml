@@ -1,12 +1,12 @@
 apiVersion: 1
 
 providers:
-  - name: "IDOP Dashboards"
+  - name: "default"
     orgId: 1
-    folder: "IDOP Ingestion"
+    folder: ""
     type: file
     disableDeletion: false
     editable: true
     options:
-      path: /var/lib/grafana/dashboards
+      path: /etc/grafana/dashboards
       foldersFromFilesStructure: false
