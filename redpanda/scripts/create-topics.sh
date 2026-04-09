@@ -68,10 +68,4 @@ rpk topic create alerts-critical \
     || echo "  (topic alerts-critical may already exist)"
 
 echo "==> All topics created successfully."
-
-
-
-
-
-echo "==> Topic creation complete."
 rpk topic list --brokers "${BROKER}"
