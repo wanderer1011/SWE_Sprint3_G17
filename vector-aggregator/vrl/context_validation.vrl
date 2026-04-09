@@ -2,23 +2,33 @@
 # VRL: Context Validation
 # REQ-2.6 — Enforce required metadata fields
 #
-# Validates: trace_id, span_id, timestamp, service.name
+# Validates against Universal Telemetry Schema:
+#   Tier 1: trace_id, span_id, service_name, timestamp
+#   Accepts sentinel values: "none" for trace_id/span_id
 # Flags invalid events for DLQ routing
 # ─────────────────────────────────────────────────────────────
 
 # Default: not invalid
 .is_invalid = false
 
-# Ensure timestamp exists and is valid
+# ── Normalize severity_text → severity for downstream compatibility ──
+if exists(.severity_text) && !exists(.severity) {
+    .severity = .severity_text
+}
+if !exists(.severity) {
+    .severity = "INFO"
+}
+
+# Ensure timestamp exists
 if !exists(.timestamp) {
     .timestamp = now()
     .validation_warning = "timestamp_injected"
 }
 
-# Validate trace_id (must be 32-char hex string)
+# Validate trace_id (must be 32-char hex string or "none" sentinel)
 if exists(.trace_id) {
     trace_id_str = string!(.trace_id)
-    if !match(trace_id_str, r'^[a-fA-F0-9]{32}$') {
+    if trace_id_str != "none" && !match(trace_id_str, r'^[a-fA-F0-9]{32}$') {
         .is_invalid = true
         .invalid_reason = "malformed_trace_id"
     }
@@ -27,29 +37,24 @@ if exists(.trace_id) {
     .invalid_reason = "missing_trace_id"
 }
 
-# Validate span_id (must be 16-char hex string)
+# Validate span_id (must be 16-char hex string or "none" sentinel)
 if exists(.span_id) {
     span_id_str = string!(.span_id)
-    if !match(span_id_str, r'^[a-fA-F0-9]{16}$') {
+    if span_id_str != "none" && !match(span_id_str, r'^[a-fA-F0-9]{16}$') {
         .is_invalid = true
         .invalid_reason = "malformed_span_id"
     }
 }
 
-# Validate service.name is present
-if !exists(.service) || !exists(.service.name) {
-    if !exists(.service_name) {
+# Validate service_name is present (flat field from edge agent schema)
+if !exists(.service_name) {
+    if exists(.service) && exists(.service.name) {
+        # Legacy/OTLP nested format: extract to flat field
+        .service_name = string!(.service.name)
+    } else {
         .is_invalid = true
         .invalid_reason = "missing_service_name"
-    } else {
-        # Normalize: move service_name into service.name
-        .service.name = del(.service_name)
     }
-}
-
-# Ensure severity is present (default to INFO)
-if !exists(.severity) {
-    .severity = "INFO"
 }
 
 # Tag validated events with aggregator metadata

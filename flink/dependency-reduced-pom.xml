@@ -143,14 +143,14 @@
     </dependency>
   </dependencies>
   <properties>
+    <maven.compiler.target>17</maven.compiler.target>
     <clickhouse.jdbc.version>0.6.0</clickhouse.jdbc.version>
+    <slf4j.version>2.0.12</slf4j.version>
     <java.version>17</java.version>
     <maven.compiler.source>17</maven.compiler.source>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <jackson.version>2.17.0</jackson.version>
     <flink.version>1.19.0</flink.version>
     <kafka.version>3.6.0</kafka.version>
-    <maven.compiler.target>17</maven.compiler.target>
-    <slf4j.version>2.0.12</slf4j.version>
-    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
   </properties>
 </project>

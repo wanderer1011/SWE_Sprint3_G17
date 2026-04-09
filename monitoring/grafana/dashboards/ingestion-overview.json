@@ -1,96 +1,64 @@
 {
-  "annotations": { "list": [] },
-  "editable": true,
-  "fiscalYearStartMonth": 0,
-  "graphTooltip": 1,
   "id": null,
-  "links": [],
+  "uid": "ingestion-overview",
+  "title": "IDOP Ingestion Layer Overview",
+  "tags": ["idop", "ingestion"],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "10s",
   "panels": [
     {
-      "title": "Ingestion Throughput (events/sec)",
+      "id": 1,
+      "title": "Vector Events In/s",
       "type": "timeseries",
-      "datasource": "Prometheus",
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
       "targets": [
         {
-          "expr": "rate(vector_events_processed_total[1m])",
+          "expr": "rate(vector_component_received_events_total[1m])",
           "legendFormat": "{{component_id}}"
         }
-      ]
+      ],
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 }
     },
     {
-      "title": "Redpanda Topic Lag",
+      "id": 2,
+      "title": "Vector Events Out/s",
       "type": "timeseries",
-      "datasource": "Prometheus",
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
       "targets": [
         {
-          "expr": "redpanda_kafka_consumer_group_committed_offset",
-          "legendFormat": "{{group}} - {{topic}}"
-        }
-      ]
-    },
-    {
-      "title": "Hot vs Cold Routing Rate",
-      "type": "timeseries",
-      "datasource": "Prometheus",
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
-      "targets": [
-        {
-          "expr": "rate(vector_events_out_total{component_id=~\"redpanda_hot|redpanda_cold\"}[1m])",
+          "expr": "rate(vector_component_sent_events_total[1m])",
           "legendFormat": "{{component_id}}"
         }
-      ]
+      ],
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 }
     },
     {
-      "title": "DLQ Events",
-      "type": "stat",
-      "datasource": "Prometheus",
-      "gridPos": { "h": 8, "w": 6, "x": 12, "y": 8 },
-      "targets": [
-        {
-          "expr": "increase(vector_events_out_total{component_id=\"redpanda_dlq\"}[1h])"
-        }
-      ]
-    },
-    {
-      "title": "ClickHouse Insert Rate",
+      "id": 3,
+      "title": "Redpanda Topic Throughput",
       "type": "timeseries",
-      "datasource": "Prometheus",
-      "gridPos": { "h": 8, "w": 6, "x": 18, "y": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
       "targets": [
         {
-          "expr": "rate(ClickHouseProfileEvents_InsertedRows[1m])"
+          "expr": "rate(redpanda_kafka_request_bytes_total[1m])",
+          "legendFormat": "{{redpanda_topic}}"
         }
-      ]
+      ],
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 }
     },
     {
-      "title": "Flink Task Managers",
+      "id": 4,
+      "title": "ClickHouse Inserted Rows/s",
       "type": "stat",
-      "datasource": "Prometheus",
-      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 16 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
       "targets": [
         {
-          "expr": "flink_jobmanager_numRegisteredTaskManagers"
+          "expr": "rate(ClickHouseProfileEvents_InsertedRows[1m])",
+          "legendFormat": "rows/s"
         }
-      ]
-    },
-    {
-      "title": "Envoy Active Connections",
-      "type": "timeseries",
-      "datasource": "Prometheus",
-      "gridPos": { "h": 8, "w": 12, "x": 6, "y": 16 },
-      "targets": [
-        {
-          "expr": "envoy_cluster_upstream_cx_active{cluster=\"vector_aggregator_grpc\"}"
-        }
-      ]
+      ],
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 }
     }
-  ],
-  "schemaVersion": 39,
-  "tags": ["idop", "ingestion"],
-  "templating": { "list": [] },
-  "time": { "from": "now-1h", "to": "now" },
-  "title": "IDOP Ingestion Layer Overview",
-  "uid": "idop-ingestion-overview"
+  ]
 }

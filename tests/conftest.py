@@ -12,13 +12,12 @@ import requests
 
 
 # ── Service URLs (from docker-compose) ──
-# changed Vector Aggregator port from 8686 to 8687, that is correct port, vector aggregator listens on it
-VECTOR_AGG_URL = os.getenv("VECTOR_AGG_URL", "http://localhost:8687")
+VECTOR_AGG_URL = os.getenv("VECTOR_AGG_URL", "http://localhost:8686")
 REDPANDA_BROKER = os.getenv("REDPANDA_BROKER", "localhost:19092")
 REDPANDA_ADMIN_URL = os.getenv("REDPANDA_ADMIN_URL", "http://localhost:9644")
 CLICKHOUSE_URL = os.getenv("CLICKHOUSE_URL", "http://localhost:8123")
-# ClickHouse container is running correctly, but the HTTP interface likely requires authentication.
-# CLICKHOUSE_URL = os.getenv("CLICKHOUSE_URL", "http://default:@localhost:8123")
+CLICKHOUSE_USER = os.getenv("CLICKHOUSE_USER", "default")
+CLICKHOUSE_PASSWORD = os.getenv("CLICKHOUSE_PASSWORD", "changeme")
 FLINK_URL = os.getenv("FLINK_URL", "http://localhost:8081")
 
 
@@ -39,8 +38,7 @@ def wait_for_service(url, timeout=60, interval=2):
 @pytest.fixture(scope="session", autouse=True)
 def ensure_services():
     """Ensure all services are running before tests."""
-    # redpanda status endpoint changed from cluster/health to status/ready in latest versions
-    wait_for_service(f"{REDPANDA_ADMIN_URL}/v1/cluster/health_overview")
+    wait_for_service(f"{REDPANDA_ADMIN_URL}/v1/cluster/health")
     wait_for_service(f"{CLICKHOUSE_URL}/ping")
 
 
@@ -50,14 +48,34 @@ def make_telemetry_event(
     body="Test log event",
     is_anomalous=False,
 ):
-    """Create a valid telemetry event for testing."""
+    """Create a valid telemetry event matching the Universal Telemetry Schema."""
+    now_ns = str(int(time.time() * 1e9))
     return {
-        "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        # Tier 1: Identity & Correlation
+        "timestamp": now_ns,
         "trace_id": uuid.uuid4().hex,
         "span_id": uuid.uuid4().hex[:16],
-        "service": {"name": service_name},
-        "severity": severity,
+        "parent_span_id": "none",
+        "service_name": service_name,
+        "service_version": "v1.0.0",
+        # Tier 2: Classification
+        "severity_text": severity,
+        "severity_number": {"TRACE": 1, "DEBUG": 5, "INFO": 9, "WARN": 13, "ERROR": 17, "CRITICAL": 21}.get(severity, 9),
+        "category": "otel-application",
+        "source_type": "otel",
+        "signal_type": "log",
+        "status_code": 0,
+        # Tier 3: Content
         "body": body,
+        "error_class": "",
+        # Tier 4: Operational Context
+        "host_name": "test-node-1",
+        "environment": "testing",
+        "deployment_id": f"deploy-{uuid.uuid4().hex[:12]}",
+        "duration_ms": -1.0,
+        # Tier 5: Pipeline Metadata
+        "pipeline_ts": str(int(time.time() * 1e9) + 100000),
+        "pii_masked": True,
     }
 
 

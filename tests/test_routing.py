@@ -40,31 +40,15 @@ class TestHotColdRouting:
     def test_normal_log_routes_to_cold(self):
         """Normal INFO log should go to telemetry-cold."""
         consumer = get_kafka_consumer("telemetry-cold")
-        
-        # # Consume any existing messages first
-        # for _ in consumer:
-        #     pass
-        # replace the above 3 lines with below line(This initializes the consumer without draining the topic.)
-        consumer.poll(timeout_ms=1000)
+        # Consume any existing messages first
+        for _ in consumer:
+            pass
 
         event = make_telemetry_event(severity="INFO", body="Normal operation log")
         send_events_to_vector([event])
 
         time.sleep(3)
-        # wait untill kafka actually produces a msg
-        # messages = list(consumer)
-        messages = []
-        start = time.time()
-
-        while time.time() - start < 8:
-            records = consumer.poll(timeout_ms=500)
-
-            for tp, msgs in records.items():
-                messages.extend(msgs)
-
-            if messages:
-                break
-
+        messages = list(consumer)
         consumer.close()
 
         assert len(messages) > 0, "Expected event on telemetry-cold"
@@ -82,20 +66,7 @@ class TestHotColdRouting:
         send_events_to_vector([event])
 
         time.sleep(3)
-        
-        # wait until kafka actually produces a msg
-        # messages = list(consumer)
-        messages = []
-        start = time.time()
-
-        while time.time() - start < 8:
-            records = consumer.poll(timeout_ms=500)
-
-            for tp, msgs in records.items():
-                messages.extend(msgs)
-
-            if messages:
-                break
+        messages = list(consumer)
         consumer.close()
 
         assert len(messages) > 0, "Expected event on telemetry-hot"

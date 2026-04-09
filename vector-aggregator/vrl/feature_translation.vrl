@@ -125,13 +125,25 @@ if match(body_text, r'(?i)(gc\s*pause|stop.the.world|full\s*gc|concurrent\s*mark
 # ───────────────────────────────────────────────────────────
 # 6. EXCEPTION / ERROR DETECTION
 # ───────────────────────────────────────────────────────────
+# Use error_class from edge agent schema if available
+if exists(.error_class) {
+    error_class_str = string(.error_class) ?? ""
+    if error_class_str != "" {
+        .ml_features.has_exception = true
+        .ml_features.exception_type = error_class_str
+        .is_metric = true
+    }
+}
+
+# Also detect exceptions from body text
 if match(body_text, r'(?i)(exception|error|fatal|panic|traceback|stack\s*trace)') {
     .ml_features.has_exception = true
-
-    # Extract exception class name
-    exception_match = parse_regex(body_text, r'(?P<exception_type>[A-Z][a-zA-Z]*(?:Exception|Error|Fault))') ?? {}
-    if exists(exception_match.exception_type) {
-        .ml_features.exception_type = exception_match.exception_type
+    # Only extract from body if not already set from schema error_class
+    if .ml_features.exception_type == "" {
+        exception_match = parse_regex(body_text, r'(?P<exception_type>[A-Z][a-zA-Z]*(?:Exception|Error|Fault))') ?? {}
+        if exists(exception_match.exception_type) {
+            .ml_features.exception_type = exception_match.exception_type
+        }
     }
     .is_metric = true
 }
@@ -181,24 +193,18 @@ if .ml_features.retry_attempt > 0 {
 
 # ───────────────────────────────────────────────────────────
 # 9. HTTP STATUS CODE & CLASS
+#    Checks: schema status_code → legacy http_status → OTel attribute
 # ───────────────────────────────────────────────────────────
-if exists(.http_status) {
+status = 0
+if exists(.status_code) {
+    status = to_int(.status_code) ?? 0
+} else if exists(.http_status) {
     status = to_int(.http_status) ?? 0
-    .ml_features.http_status = status
-    if status >= 500 {
-        .ml_features.http_status_class = "5xx"
-        .ml_features.is_server_error = true
-        .is_metric = true
-    } else if status >= 400 {
-        .ml_features.http_status_class = "4xx"
-        .ml_features.is_client_error = true
-    } else if status >= 300 {
-        .ml_features.http_status_class = "3xx"
-    } else if status >= 200 {
-        .ml_features.http_status_class = "2xx"
-    }
 } else if exists(.attributes."http.status_code") {
     status = to_int(.attributes."http.status_code") ?? 0
+}
+
+if status > 0 {
     .ml_features.http_status = status
     if status >= 500 {
         .ml_features.http_status_class = "5xx"
