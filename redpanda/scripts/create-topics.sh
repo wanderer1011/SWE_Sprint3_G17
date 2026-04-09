@@ -1,22 +1,22 @@
 #!/bin/bash
-# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ─────────────────────────────────────────────────────────────
 # Create Redpanda Topics for IDOP Ingestion Layer
 #
 # Topics:
-#   telemetry-hot   â€” Fast ML/Alerts path (NVMe, low latency)
-#   telemetry-cold  â€” Bulk log storage path (S3 tiered)
-#   telemetry-dlq   â€” Dead letter queue (7-day retention)
-#   telemetry-ml-features â€” Flink â†’ ML pipeline
-#   alerts-critical â€” Flink â†’ AlertManager
-# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-set -eu
+#   telemetry-hot   — Fast ML/Alerts path (NVMe, low latency)
+#   telemetry-cold  — Bulk log storage path (S3 tiered)
+#   telemetry-dlq   — Dead letter queue (7-day retention)
+#   telemetry-ml-features — Flink → ML pipeline
+#   alerts-critical — Flink → AlertManager
+# ─────────────────────────────────────────────────────────────
+set -euo pipefail
 
-BROKER="${REDPANDA_BROKER:-localhost:9092}"
+BROKER="${REDPANDA_BROKER:-localhost:19092}"
 REPLICATION="${REPLICATION_FACTOR:-1}"
 
 echo "==> Creating Redpanda topics on ${BROKER}..."
 
-# Hot Path â€” low latency, high throughput, NVMe storage
+# Hot Path — low latency, high throughput, NVMe storage
 rpk topic create telemetry-hot \
     --brokers "${BROKER}" \
     --partitions "${HOT_PARTITIONS:-6}" \
@@ -27,7 +27,7 @@ rpk topic create telemetry-hot \
     --topic-config min.insync.replicas=1 \
     || echo "  (topic telemetry-hot may already exist)"
 
-# Cold Path â€” bulk storage, Zstd compression, S3 tiered storage
+# Cold Path — bulk storage, Zstd compression, S3 tiered storage
 rpk topic create telemetry-cold \
     --brokers "${BROKER}" \
     --partitions "${COLD_PARTITIONS:-12}" \
@@ -40,7 +40,7 @@ rpk topic create telemetry-cold \
     --topic-config redpanda.remote.read=true \
     || echo "  (topic telemetry-cold may already exist)"
 
-# Dead Letter Queue â€” 7-day retention, manual inspection
+# Dead Letter Queue — 7-day retention, manual inspection
 rpk topic create telemetry-dlq \
     --brokers "${BROKER}" \
     --partitions 3 \
@@ -49,7 +49,7 @@ rpk topic create telemetry-dlq \
     --topic-config compression.type=zstd \
     || echo "  (topic telemetry-dlq may already exist)"
 
-# ML Features â€” Flink output â†’ Python ML Pipeline
+# ML Features — Flink output → Python ML Pipeline
 rpk topic create telemetry-ml-features \
     --brokers "${BROKER}" \
     --partitions 6 \
@@ -58,7 +58,7 @@ rpk topic create telemetry-ml-features \
     --topic-config compression.type=snappy \
     || echo "  (topic telemetry-ml-features may already exist)"
 
-# Critical Alerts â€” Flink â†’ AlertManager
+# Critical Alerts — Flink output → AlertManager/PagerDuty
 rpk topic create alerts-critical \
     --brokers "${BROKER}" \
     --partitions 3 \
@@ -68,6 +68,9 @@ rpk topic create alerts-critical \
     || echo "  (topic alerts-critical may already exist)"
 
 echo "==> All topics created successfully."
+
+
+
 
 
 echo "==> Topic creation complete."
