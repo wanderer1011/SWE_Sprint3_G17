@@ -40,23 +40,18 @@ services:
     ports:
       - "${VECTOR_AGG_PORT:-8686}:8686"              # Vector API
       - "${VECTOR_AGG_GRPC_PORT:-4317}:4317"         # OTLP gRPC
-      - "${VECTOR_HEALTH_PORT:-8687}:8687"           # Health endpoint
+      - "${VECTOR_HEALTH_PORT:-8687}:8687"           # HTTP JSON source
     volumes:
       - ./vector-aggregator/vector.yaml:/etc/vector/vector.yaml:ro
       - ./vector-aggregator/vrl:/etc/vector/vrl:ro
     depends_on:
       redpanda:
         condition: service_healthy
-    # healthcheck:                                     # FIX: was missing — blocks envoy startup
-    #   test: ["CMD", "curl", "-sf", "http://127.0.0.1:8686/health"]
-    #   interval: 10s
-    #   timeout: 5s
-    #   start_period: 15s
-    #   retries: 5
-    healthcheck:
-      test: ["CMD-SHELL", "bash -c '</dev/tcp/localhost/8686'"]
+    healthcheck:                                     # FIX: was missing — blocks envoy startup
+      test: ["CMD", "curl", "-sf", "http://127.0.0.1:8686/health"]
       interval: 10s
       timeout: 5s
+      start_period: 15s
       retries: 5
     networks:
       - ingestion-net
@@ -88,7 +83,7 @@ services:
       - "9644:9644"     # Admin API
     volumes:
       - redpanda-data:/var/lib/redpanda/data
-      - ./redpanda/scripts:/etc/redpanda/scripts:ro # so that makefile's topics target can access it
+      - ./redpanda/scripts:/etc/redpanda/scripts:ro
     healthcheck:
       test: ["CMD", "rpk", "cluster", "health"]
       interval: 10s
@@ -111,6 +106,22 @@ services:
     depends_on:
       redpanda:
         condition: service_healthy
+    networks:
+      - ingestion-net
+
+  # Redpanda Topic Initialization (runs once, then exits)
+  redpanda-init:
+    image: docker.redpanda.com/redpandadata/redpanda:v24.1.1
+    container_name: idop-redpanda-init
+    entrypoint: ["/bin/bash", "/etc/redpanda/scripts/create-topics.sh"]
+    environment:
+      - REDPANDA_BROKER=redpanda:9092
+    volumes:
+      - ./redpanda/scripts/create-topics.sh:/etc/redpanda/scripts/create-topics.sh:ro
+    depends_on:
+      redpanda:
+        condition: service_healthy
+    restart: "no"
     networks:
       - ingestion-net
 
@@ -160,6 +171,8 @@ services:
         state.backend: rocksdb
         state.checkpoints.dir: file:///opt/flink/checkpoints
         execution.checkpointing.interval: ${FLINK_CHECKPOINT_INTERVAL_MS:-60000}
+        metrics.reporter.prom.factory.class: org.apache.flink.metrics.prometheus.PrometheusReporterFactory
+        metrics.reporter.prom.port: 9249
     volumes:
       - flink-checkpoints:/opt/flink/checkpoints
     depends_on:                                      # FIX: was missing — Flink needs Kafka broker ready
@@ -186,6 +199,8 @@ services:
         taskmanager.numberOfTaskSlots: ${FLINK_PARALLELISM:-2}
         state.backend: rocksdb
         state.checkpoints.dir: file:///opt/flink/checkpoints
+        metrics.reporter.prom.factory.class: org.apache.flink.metrics.prometheus.PrometheusReporterFactory
+        metrics.reporter.prom.port: 9249
     volumes:
       - flink-checkpoints:/opt/flink/checkpoints
     depends_on:
@@ -194,17 +209,31 @@ services:
     networks:
       - ingestion-net
 
+  # Flink Job Submission (runs once, then exits)
+  flink-job-submit:
+    build: ./flink
+    container_name: idop-flink-job-submit
+    entrypoint: ["/opt/flink/bin/flink"]
+    command: ["run", "-d", "-m", "flink-jobmanager:8081", "/opt/flink/usrlib/ingestion-hot-path-1.0.0.jar"]
+    depends_on:
+      flink-jobmanager:
+        condition: service_healthy
+      redpanda-init:
+        condition: service_completed_successfully
+    restart: "no"
+    networks:
+      - ingestion-net
+
   # ═══════════════════════════════════════════════════════════
   # 6. Monitoring Stack
   # ═══════════════════════════════════════════════════════════
   prometheus:
-    image: prom/prometheus:v2.51.0
+    build: ./monitoring/prometheus
     container_name: idop-prometheus
     restart: unless-stopped
     ports:
       - "${PROMETHEUS_PORT:-9090}:9090"
     volumes:
-      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - prometheus-data:/prometheus
     healthcheck:                                     # FIX: was missing entirely
       test: ["CMD-SHELL", "wget -qO- http://localhost:9090/-/healthy || exit 1"]
@@ -216,16 +245,15 @@ services:
       - ingestion-net
 
   grafana:
-    image: grafana/grafana:10.4.1
+    build: ./monitoring/grafana
     container_name: idop-grafana
     restart: unless-stopped
     ports:
       - "${GRAFANA_PORT:-3000}:3000"
     environment:
       - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-admin}
+      - GF_INSTALL_PLUGINS=grafana-clickhouse-datasource
     volumes:
-      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
-      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
       - grafana-data:/var/lib/grafana
     depends_on:
       prometheus:
@@ -235,6 +263,21 @@ services:
       interval: 15s
       timeout: 5s
       start_period: 15s
+      retries: 3
+    networks:
+      - ingestion-net
+
+  alertmanager:
+    build: ./monitoring/alertmanager
+    container_name: idop-alertmanager
+    restart: unless-stopped
+    ports:
+      - "${ALERTMANAGER_PORT:-9093}:9093"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:9093/-/healthy || exit 1"]
+      interval: 15s
+      timeout: 5s
+      start_period: 10s
       retries: 3
     networks:
       - ingestion-net

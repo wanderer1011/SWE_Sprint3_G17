@@ -117,7 +117,7 @@ static_resources:
                   address:
                     socket_address:
                       address: vector-aggregator
-                      port_value: 8686
+                      port_value: 8687               # FIX: was 8686 (Vector API) — must be 8687 (HTTP JSON ingest)
       # Active health check — was missing entirely
       health_checks:
         - timeout: 5s
@@ -144,7 +144,7 @@ static_resources:
                   address:
                     socket_address:
                       address: vector-aggregator
-                      port_value: 8687
+                      port_value: 8686               # FIX: was 8687 (HTTP source) — must be 8686 (Vector API /health)
       health_checks:
         - timeout: 5s
           interval: 10s

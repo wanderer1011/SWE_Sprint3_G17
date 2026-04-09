@@ -3,42 +3,47 @@
 -- REQ-2.4: ClickHouse Kafka Engine operates as consumer group
 -- ═══════════════════════════════════════════════════════════
 
--- CREATE TABLE IF NOT EXISTS telemetry_staging.kafka_telemetry_cold
--- (
---     timestamp         DateTime64(9, 'UTC'),
---     trace_id          String,
---     span_id           String,
---     service_name      String,
---     severity          String,
---     body              String,
---     ml_features       String,     -- JSON-encoded ML features
---     is_anomalous      UInt8,
---     anomaly_reason    String,
---     aggregator_received_at  DateTime64(9, 'UTC')
--- )
--- ENGINE = Kafka
--- SETTINGS
---     kafka_broker_list = 'redpanda:9092',
---     kafka_topic_list = 'telemetry-cold',
---     kafka_group_name = 'clickhouse-cold-consumer',
---     kafka_format = 'JSONEachRow',
---     kafka_num_consumers = 1,
---     kafka_max_block_size = 100000,       -- REQ-2.4: batch 100k rows
---     kafka_skip_broken_messages = 1000;
-
--- testing cause of JSON parsing issues with ml_features field — will add back after fixing producer side
-CREATE TABLE telemetry_staging.kafka_telemetry_cold
+CREATE TABLE IF NOT EXISTS telemetry_staging.kafka_telemetry_cold
 (
-    timestamp String,
-    trace_id String,
-    span_id String,
-    service_name String,
-    severity String,
-    body String,
-    ml_features String,
-    is_anomalous UInt8,
-    anomaly_reason    String,
-    aggregator_received_at DateTime64(9, 'UTC')
+    -- Tier 1: Identity & Correlation
+    timestamp           String,
+    trace_id            String,
+    span_id             String,
+    parent_span_id      String,
+    service_name        String,
+    service_version     String,
+
+    -- Tier 2: Classification
+    severity_text       String,
+    severity            String,
+    severity_number     UInt8,
+    category            String,
+    source_type         String,
+    signal_type         String,
+    status_code         UInt16,
+
+    -- Tier 3: Content
+    body                String,
+    error_class         String,
+
+    -- Tier 4: Operational Context
+    host_name           String,
+    environment         String,
+    deployment_id       String,
+    duration_ms         Float64,
+
+    -- Tier 5: Pipeline Metadata
+    pipeline_ts         String,
+    pii_masked          UInt8,
+
+    -- Vector Aggregator enrichments
+    ml_features         String,
+    is_anomalous        UInt8,
+    anomaly_reason      String,
+    is_metric           UInt8,
+    is_security_flag    UInt8,
+    resource_flat       String,
+    aggregator_received_at  String
 )
 ENGINE = Kafka
 SETTINGS
@@ -47,5 +52,5 @@ SETTINGS
     kafka_group_name = 'clickhouse-cold-consumer',
     kafka_format = 'JSONEachRow',
     kafka_num_consumers = 1,
-    kafka_max_block_size = 100000;
-    -- kafka_skip_broken_messages = 100;
+    kafka_max_block_size = 100000,       -- REQ-2.4: batch 100k rows
+    kafka_skip_broken_messages = 1000;

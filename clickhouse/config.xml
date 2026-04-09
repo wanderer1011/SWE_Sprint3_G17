@@ -5,8 +5,7 @@
         <console>1</console>
     </logger>
 
-    <!-- Kafka (Redpanda) integration settings 
-    clickhouse is internally converting kafka_broker_list to kafka.broker.list and giving error, commented it -->
+    <!-- Kafka (Redpanda) integration settings -->
     <kafka>
         <!-- broker is set in the Kafka Engine table definition (kafka_broker_list) -->
         <auto_offset_reset>earliest</auto_offset_reset>

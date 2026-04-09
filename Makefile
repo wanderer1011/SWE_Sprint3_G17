@@ -1,8 +1,21 @@
 .PHONY: help up down restart logs build test health topics flink-build flink-deploy flink-wait clean status validate
 
+# Use Git Bash on Windows so Unix shell syntax works in recipes
+# added for windows
+ifeq ($(OS),Windows_NT)
+    SHELL := C:/PROGRA~1/Git/bin/bash.exe
+endif
+
 FLINK_JAR_PATH ?= /opt/flink/usrlib/ingestion-hot-path-1.0.0.jar
 FLINK_API_URL ?= http://localhost:8081
 FLINK_DEPLOY_WAIT_SECONDS ?= 30
+
+# added for windows
+ifeq ($(OS),Windows_NT)
+    PYTHON ?= python
+else
+    PYTHON ?= python3
+endif
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | \
@@ -65,16 +78,16 @@ health: ## Run health checks on all services
 	bash scripts/health-check.sh
 
 test: ## Run integration tests
-	cd tests && python -m pytest -v
+	cd tests && $(PYTHON) -m pytest -v
 
 test-routing: ## Test hot/cold/DLQ routing only
-	cd tests && python -m pytest test_routing.py -v
+	cd tests && $(PYTHON) -m pytest test_routing.py -v
 
 test-e2e: ## Run full end-to-end pipeline test
-	cd tests && python -m pytest test_e2e_pipeline.py -v
+	cd tests && $(PYTHON) -m pytest test_e2e_pipeline.py -v
 
 generate-data: ## Generate sample telemetry data
-	python3 scripts/generate-test-data.py
+	$(PYTHON) scripts/generate-test-data.py
 
 clean: ## Remove volumes and data
 	docker compose down -v

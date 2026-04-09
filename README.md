@@ -1,6 +1,6 @@
-# IDOP Ingestion Layer - Sprint 3
+# IDOP Ingestion Layer — Sprint 2
 
-> Intelligence-Driven Observability Platform - Ingestion & Stream Processing Module
+> Intelligence-Driven Observability Platform — Ingestion & Stream Processing Module
 
 ## Architecture Overview
 
@@ -161,14 +161,14 @@ make test
 
 ## Architecture Improvements Over Original Design
 
-1. **VRL-based ML Feature Translation** - Feature extraction happens at the aggregator level via VRL transforms, reducing Flink CPU load and enabling faster routing decisions.
+1. **VRL-based ML Feature Translation** — Feature extraction happens at the aggregator level via VRL transforms, reducing Flink CPU load and enabling faster routing decisions.
 
-2. **Probabilistic Tail Sampling** - Non-anomalous metrics are sampled at 10% before reaching the hot path, significantly reducing Flink and Redpanda hot-topic load.
+2. **Probabilistic Tail Sampling** — Non-anomalous metrics are sampled at 10% before reaching the hot path, significantly reducing Flink and Redpanda hot-topic load.
 
-3. **Pre-computed RED Metrics MV** - A ClickHouse Materialized View pre-aggregates 1-minute RED metrics, ensuring Grafana dashboards never hit raw log tables (REQ-5.5).
+3. **Pre-computed RED Metrics MV** — A ClickHouse Materialized View pre-aggregates 1-minute RED metrics, ensuring Grafana dashboards never hit raw log tables (REQ-5.5).
 
-4. **Bloom Filter Indexes** - trace_id and span_id have bloom filter indexes for sub-100ms point lookups (REQ-4.3).
+4. **Bloom Filter Indexes** — trace_id and span_id have bloom filter indexes for sub-100ms point lookups (REQ-4.3).
 
-5. **Structured Alert Side Output** - Flink emits typed `AlertEvent` objects to a dedicated `alerts-critical` topic, decoupling alert routing from ML feature generation.
+5. **Structured Alert Side Output** — Flink emits typed `AlertEvent` objects to a dedicated `alerts-critical` topic, decoupling alert routing from ML feature generation.
 
-6. **Health Check Script** - Single-command verification of all 8 services for CI/CD integration.
+6. **Health Check Script** — Single-command verification of all 8 services for CI/CD integration.

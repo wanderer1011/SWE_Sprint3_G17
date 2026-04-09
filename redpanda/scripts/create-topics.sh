@@ -63,9 +63,9 @@ rpk topic create alerts-critical \
     --brokers "${BROKER}" \
     --partitions 3 \
     --replicas "${REPLICATION}" \
-    --topic-config retention.ms=259200000 \
+    --topic-config retention.ms=604800000 \
     --topic-config compression.type=snappy \
     || echo "  (topic alerts-critical may already exist)"
 
-echo "==> Topic creation complete."
+echo "==> All topics created successfully."
 rpk topic list --brokers "${BROKER}"
