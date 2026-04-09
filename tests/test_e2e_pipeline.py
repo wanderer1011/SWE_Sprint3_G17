@@ -54,11 +54,14 @@ class TestEndToEndPipeline:
 
     def test_redpanda_topics_exist(self):
         """Verify all required topics are created."""
-        resp = requests.get(f"{REDPANDA_ADMIN_URL}/v1/cluster/health", timeout=5)
+        resp = requests.get(f"{REDPANDA_ADMIN_URL}/v1/cluster/health_overview", timeout=5)
         assert resp.status_code == 200
 
     def test_flink_job_running(self):
         """Verify the Flink hot path job is running."""
+        # -----------------------------------
+        # the previous version had a wait time configured code, if this fails, check it out once!!
+        # -----------------------------------
         try:
             resp = requests.get(f"{FLINK_URL}/jobs/overview", timeout=5)
             if resp.status_code == 200:

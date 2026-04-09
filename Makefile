@@ -1,13 +1,17 @@
-.PHONY: help up down restart logs build test health topics flink-build flink-deploy clean status validate
+.PHONY: help up down restart logs build test health topics flink-build flink-deploy flink-wait clean status validate
+
+FLINK_JAR_PATH ?= /opt/flink/usrlib/ingestion-hot-path-1.0.0.jar
+FLINK_API_URL ?= http://localhost:8081
+FLINK_DEPLOY_WAIT_SECONDS ?= 30
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | \
 		awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
 
-build: ## Build all Docker images (includes Flink JAR via multi-stage)
+build: ## Build all Docker images
 	docker compose build
 
-up: build ## Start full pipeline (auto-creates topics, submits Flink job)
+up: build ## Start the full ingestion pipeline (builds first)
 	docker compose up -d --wait
 
 down: ## Stop the full ingestion pipeline
@@ -25,15 +29,37 @@ status: ## Show service health status
 validate: ## Validate docker-compose.yml syntax
 	docker compose config --quiet
 
-topics: ## Manually create Redpanda topics (auto-runs on 'make up')
+topics: ## Create Redpanda topics
 	docker compose exec redpanda bash /etc/redpanda/scripts/create-topics.sh
+# if command fails, replace the above with below for running locally
+# 	bash ./redpanda/scripts/create-topics.sh
 
-flink-build: ## Build Flink job JAR locally (optional — Docker multi-stage handles this)
+flink-build: ## Build Flink job JAR
 	cd flink && mvn clean package -DskipTests
 
-flink-deploy: ## Manually submit Flink job (auto-runs on 'make up')
-	docker compose exec flink-jobmanager flink run \
-		/opt/flink/usrlib/ingestion-hot-path-1.0.0.jar
+flink-deploy: flink-build ## Build and submit Flink job to cluster
+	@RUNNING_COUNT=$$(curl -sf "$(FLINK_API_URL)/jobs/overview" | grep -o '"state":"RUNNING"' | wc -l | tr -d ' '); \
+	if [ "$$RUNNING_COUNT" -gt 0 ]; then \
+		echo "A Flink job is already RUNNING; skipping duplicate submission."; \
+	else \
+		echo "Submitting Flink job in detached mode..."; \
+		docker compose exec -T flink-jobmanager flink run -d $(FLINK_JAR_PATH); \
+	fi
+	@$(MAKE) flink-wait
+
+flink-wait: ## Wait until a Flink job reaches RUNNING state
+	@echo "Waiting for Flink job to reach RUNNING state..."
+	@for i in $$(seq 1 $(FLINK_DEPLOY_WAIT_SECONDS)); do \
+		RUNNING_COUNT=$$(curl -sf "$(FLINK_API_URL)/jobs/overview" | grep -o '"state":"RUNNING"' | wc -l | tr -d ' '); \
+		if [ "$$RUNNING_COUNT" -gt 0 ]; then \
+			echo "Flink job is RUNNING."; \
+			exit 0; \
+		fi; \
+		sleep 1; \
+	done; \
+	echo "No RUNNING Flink jobs found after $(FLINK_DEPLOY_WAIT_SECONDS)s." >&2; \
+	curl -sf "$(FLINK_API_URL)/jobs/overview" || true; \
+	exit 1
 
 health: ## Run health checks on all services
 	bash scripts/health-check.sh
@@ -48,7 +74,7 @@ test-e2e: ## Run full end-to-end pipeline test
 	cd tests && python -m pytest test_e2e_pipeline.py -v
 
 generate-data: ## Generate sample telemetry data
-	python scripts/generate-test-data.py
+	python3 scripts/generate-test-data.py
 
 clean: ## Remove volumes and data
 	docker compose down -v

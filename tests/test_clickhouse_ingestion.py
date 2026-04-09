@@ -27,7 +27,7 @@ def clickhouse_query(query):
     resp = requests.post(
         CLICKHOUSE_URL,
         data=query,
-        headers={"Content-Type": "text/plain"},
+        headers={"Content-Type": "text/plain"},     # mighgt cause an error, check it out once!!
         params={"user": CLICKHOUSE_USER, "password": CLICKHOUSE_PASSWORD},
         timeout=10,
     )
@@ -48,6 +48,10 @@ class TestClickHouseIngestion:
             body=unique_body,
         )
         send_events_to_vector([event])
+        
+        # -----------------------------------
+        # the previous version had a wait time configured code, if this fails, check it out once!!
+        # -----------------------------------
 
         # Wait for Kafka Engine + MV pipeline
         time.sleep(15)
@@ -67,10 +71,16 @@ class TestClickHouseIngestion:
         send_events_to_vector([event])
 
         time.sleep(15)
-
+        
+        # Verify the trace_id is found in telemetry.logs, which relies on the bloom filter index for performance
         result = clickhouse_query(
-            f"SELECT count() FROM telemetry.logs WHERE trace_id = '{trace_id}'"
-        )
+            f"""
+            SELECT count()
+            FROM telemetry.logs
+            WHERE trace_id = '{trace_id}'
+            AND service_name = 'test-bloom'
+            """
+            )
         count = int(result) if result else 0
         assert count >= 1, f"Expected trace in ClickHouse, got count={count}"
 

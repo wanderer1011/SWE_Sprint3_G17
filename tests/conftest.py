@@ -12,7 +12,7 @@ import requests
 
 
 # ── Service URLs (from docker-compose) ──
-VECTOR_AGG_URL = os.getenv("VECTOR_AGG_URL", "http://localhost:8686")
+VECTOR_AGG_URL = os.getenv("VECTOR_AGG_URL", "http://localhost:8687")
 REDPANDA_BROKER = os.getenv("REDPANDA_BROKER", "localhost:19092")
 REDPANDA_ADMIN_URL = os.getenv("REDPANDA_ADMIN_URL", "http://localhost:9644")
 CLICKHOUSE_URL = os.getenv("CLICKHOUSE_URL", "http://localhost:8123")
@@ -38,7 +38,7 @@ def wait_for_service(url, timeout=60, interval=2):
 @pytest.fixture(scope="session", autouse=True)
 def ensure_services():
     """Ensure all services are running before tests."""
-    wait_for_service(f"{REDPANDA_ADMIN_URL}/v1/cluster/health")
+    wait_for_service(f"{REDPANDA_ADMIN_URL}/v1/cluster/health_overview")
     wait_for_service(f"{CLICKHOUSE_URL}/ping")
 
 
@@ -52,6 +52,7 @@ def make_telemetry_event(
     now_ns = str(int(time.time() * 1e9))
     return {
         # Tier 1: Identity & Correlation
+        # "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),  # previous version!!(might get errors in the database, check it out once!!)
         "timestamp": now_ns,
         "trace_id": uuid.uuid4().hex,
         "span_id": uuid.uuid4().hex[:16],
