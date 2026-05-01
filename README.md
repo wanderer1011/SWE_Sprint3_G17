@@ -1,4 +1,4 @@
-# IDOP Ingestion Layer — Sprint 2
+# IDOP Ingestion Layer — Sprint 3
 
 > Intelligence-Driven Observability Platform — Ingestion & Stream Processing Module
 
